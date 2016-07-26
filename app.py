@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+from gevent import monkey
+monkey.patch_all()
+
 import boto3
 import collections
 import connexion
@@ -47,6 +50,14 @@ def _round(f):
     return round(f, 8)
 
 
+def read_files(s3, bucket, files):
+    for log_file in files:
+        response = s3.get_object(Bucket=bucket, Key=log_file)
+        contents = response['Body'].read()
+        for line in contents.rstrip().split(b'\n'):
+            yield line
+
+
 def get_stats(account_id: str, region: str, prefix: str):
     bucket = os.getenv('BUCKET')
 
@@ -65,14 +76,20 @@ def get_stats(account_id: str, region: str, prefix: str):
 
     if not most_recent:
         return 'access log not found', 404
-    response = s3.get_object(Bucket=bucket, Key=most_recent['Key'])
+
+    # TODO: we need to find the most recent "complete" set of access logs
+    # (each ELB instance writes its own log file, but not at the same time)
+    files = []
+    common_prefix = most_recent['Key'].rsplit('Z_', 1)[0]
+    for row in contents:
+        if row['Key'].startswith(common_prefix):
+            files.append(row['Key'])
 
     latencies = collections.defaultdict(list)
     request_sizes = collections.defaultdict(list)
     response_sizes = collections.defaultdict(list)
 
-    contents = response['Body'].read()
-    for line in contents.rstrip().split(b'\n'):
+    for line in read_files(s3, bucket, files):
         parts = line.split(b' ', 11)
         status_code = parts[7].decode('ascii')
         http_method = parts[-1].split(b' ', 1)[0].strip(b'"').decode('ascii')
@@ -87,7 +104,7 @@ def get_stats(account_id: str, region: str, prefix: str):
         response_sizes[(status_code, '*')].append(response_size)
 
     dicts = {'latencies': latencies, 'request_sizes': request_sizes, 'response_sizes': response_sizes}
-    result = {}
+    result = {'_files': files}
     for name, cont in dicts.items():
         stats = {}
         for key, values in cont.items():
