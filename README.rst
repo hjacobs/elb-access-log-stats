@@ -27,3 +27,4 @@ Running
 
     $ # NOTE: you need to provide AWS credentials somehow (this is automagic on EC2)
     $ docker run -it -p 8080:8080 -e BUCKET=mybucket-123-eu-central-1 elb-access-log-stats
+    $ # now open http://localhost:8080/ui/ in your browser to see the Swagger UI
