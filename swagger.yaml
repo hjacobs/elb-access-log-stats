@@ -1,0 +1,47 @@
+swagger: '2.0'
+info:
+  title: ELB Access Log Stats
+  version: "0.1"
+consumes:
+  - application/json
+produces:
+  - application/json
+security:
+  # enable OAuth protection for all REST endpoints
+  # (only active if the TOKENINFO_URL environment variable is set)
+  - oauth2: [uid]
+paths:
+  /access-logs/{account_id}/{region}/{prefix}/stats:
+    get:
+      tags: [Access Logs]
+      operationId: app.get_stats
+      summary: Get statistics
+      parameters:
+        - name: account_id
+          in: path
+          type: string
+          pattern: "^[0-9]+$"
+        - name: region
+          in: path
+          type: string
+          pattern: "^[a-z0-9-]+$"
+        - name: prefix
+          in: path
+          type: string
+      responses:
+        404:
+          description: Access log not found (or not yet pushed by AWS)
+          schema:
+            type: string
+        200:
+          description: Return statistics
+          schema:
+            type: object
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://example.com/oauth2/dialog
+    scopes:
+      uid: Unique identifier of the user accessing the service.

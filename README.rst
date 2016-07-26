@@ -10,3 +10,9 @@ ELB Access Log Statistics
 
   * Latencies by status code and HTTP method
   * Request/response sizes
+
+.. code-block:: bash
+
+    $ sudo pip3 install -U scm-source
+    $ scm-source
+    $ docker build -t elb-access-log-stats .
